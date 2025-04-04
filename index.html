@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Narciso Test - Teste de Velocidade Online</title>
+    <style>
+        :root {
+            --primary-color: #1a73e8;
+            --secondary-color: #4285f4;
+            --dark-blue: #0d47a1;
+            --light-blue: #bbdefb;
+            --text-color: #333;
+            --white: #ffffff;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-blue));
+            color: var(--white);
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            flex: 1;
+        }
+        
+        .test-container {
+            background-color: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .speedometer {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 2rem auto;
+        }
+        
+        .outer-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #4CAF50 0%, 
+                #8BC34A 20%, 
+                #FFEB3B 40%, 
+                #FF9800 60%, 
+                #F44336 80%, 
+                #F44336 100%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .inner-circle {
+            width: 70%;
+            height: 70%;
+            border-radius: 50%;
+            background-color: var(--white);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .speed-value {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .speed-unit {
+            font-size: 1.2rem;
+            color: var(--text-color);
+        }
+        
+        .test-status {
+            font-size: 1.2rem;
+            margin: 1rem 0;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:hover {
+            background-color: var(--dark-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .results {
+            background-color: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        
+        .results h2 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .result-item {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 8px;
+            background-color: var(--light-blue);
+        }
+        
+        .result-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .result-label {
+            font-size: 1rem;
+            color: var(--text-color);
+        }
+        
+        .online-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: center;
+            border-left: 5px solid #ffc107;
+        }
+        
+        footer {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-blue));
+            color: var(--white);
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .speedometer {
+                width: 250px;
+                height: 250px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Narciso Test</h1>
+        <p>Teste de velocidade de internet em tempo real</p>
+    </header>
+    
+    <div class="container">
+        <div class="online-warning">
+            <strong>Atenção:</strong> Este teste requer conexão com a internet para funcionar corretamente.
+        </div>
+        
+        <div class="test-container">
+            <h2>Teste sua velocidade de internet</h2>
+            <p>Clique no botão abaixo para iniciar o teste de velocidade</p>
+            
+            <div class="speedometer">
+                <div class="outer-circle">
+                    <div class="inner-circle">
+                        <div class="speed-value" id="speed-value">0</div>
+                        <div class="speed-unit">Mbps</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-status" id="test-status">Pronto para testar</div>
+            
+            <button class="btn" id="start-test">Iniciar Teste</button>
+        </div>
+        
+        <div class="results" id="results">
+            <h2>Resultados do Teste</h2>
+            <div class="result-grid">
+                <div class="result-item">
+                    <div class="result-value" id="download-speed">0</div>
+                    <div class="result-label">Download (Mbps)</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-value" id="upload-speed">0</div>
+                    <div class="result-label">Upload (Mbps)</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-value" id="ping">0</div>
+                    <div class="result-label">Ping (ms)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>&copy; 2023 Narciso Test - Todos os direitos reservados</p>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const startBtn = document.getElementById('start-test');
+            const speedValue = document.getElementById('speed-value');
+            const testStatus = document.getElementById('test-status');
+            const resultsSection = document.getElementById('results');
+            const downloadSpeed = document.getElementById('download-speed');
+            const uploadSpeed = document.getElementById('upload-speed');
+            const pingValue = document.getElementById('ping');
+            
+            let testInProgress = false;
+            
+            // Verificar se o navegador suporta a API Speedtest
+            if (typeof SpeedTest === 'undefined') {
+                testStatus.textContent = "Erro: Não foi possível carregar o teste de velocidade. Verifique sua conexão com a internet.";
+                startBtn.disabled = true;
+                return;
+            }
+            
+            startBtn.addEventListener('click', function() {
+                if (testInProgress) return;
+                
+                testInProgress = true;
+                startBtn.disabled = true;
+                testStatus.textContent = "Preparando teste...";
+                resultsSection.style.display = 'none';
+                
+                // Reset speedometer
+                speedValue.textContent = '0';
+                
+                // Carrega o script da API Speedtest dinamicamente
+                if (typeof speedtest === 'undefined') {
+                    loadSpeedtestScript();
+                } else {
+                    startSpeedtest();
+                }
+            });
+            
+            function loadSpeedtestScript() {
+                testStatus.textContent = "Carregando teste de velocidade...";
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/speedtest-net@2.1.0/dist/speedtest.min.js';
+                script.onload = function() {
+                    startSpeedtest();
+                };
+                script.onerror = function() {
+                    testStatus.textContent = "Erro: Não foi possível carregar o teste de velocidade. Verifique sua conexão com a internet.";
+                    startBtn.disabled = false;
+                    testInProgress = false;
+                };
+                document.head.appendChild(script);
+            }
+            
+            function startSpeedtest() {
+                testStatus.textContent = "Conectando ao servidor...";
+                
+                const speedTest = new SpeedTest({
+                    maxDuration: 15000,
+                    pingCount: 10,
+                    serverUrl: 'https://speedtest.net/api/js/servers?engine=js'
+                });
+                
+                // Start ping test
+                speedTest.onping = function(ping) {
+                    testStatus.textContent = "Testando ping...";
+                    pingValue.textContent = ping.toFixed(0);
+                };
+                
+                // Start download test
+                speedTest.ondownloadteststart = function() {
+                    testStatus.textContent = "Testando velocidade de download...";
+                };
+                
+                speedTest.ondownloadprogress = function(dl) {
+                    speedValue.textContent = dl.toFixed(1);
+                    animateNeedle(dl);
+                };
+                
+                speedTest.ondownloadend = function(dl) {
+                    downloadSpeed.textContent = dl.toFixed(1);
+                    testStatus.textContent = "Download concluído. Preparando teste de upload...";
+                };
+                
+                // Start upload test
+                speedTest.onuploadteststart = function() {
+                    testStatus.textContent = "Testando velocidade de upload...";
+                };
+                
+                speedTest.onuploadprogress = function(ul) {
+                    speedValue.textContent = ul.toFixed(1);
+                    animateNeedle(ul);
+                };
+                
+                speedTest.onuploadend = function(ul) {
+                    uploadSpeed.textContent = ul.toFixed(1);
+                    testStatus.textContent = "Teste concluído!";
+                    resultsSection.style.display = 'block';
+                    startBtn.disabled = false;
+                    testInProgress = false;
+                };
+                
+                speedTest.onerror = function(error) {
+                    testStatus.textContent = "Erro: " + error.message;
+                    startBtn.disabled = false;
+                    testInProgress = false;
+                };
+                
+                // Start the test
+                speedTest.start();
+            }
+            
+            // Animation for the speedometer needle (visual effect only)
+            function animateNeedle(value) {
+                const outerCircle = document.querySelector('.outer-circle');
+                // Limit to 100 Mbps for visualization purposes
+                const limitedValue = Math.min(value, 100);
+                outerCircle.style.transform = `rotate(${limitedValue * 1.8}deg)`;
+            }
+        });
+    </script>
+</body>
+</html>
