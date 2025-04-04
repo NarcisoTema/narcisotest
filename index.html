@@ -191,6 +191,17 @@
             border-left: 5px solid #ffc107;
         }
         
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: center;
+            border-left: 5px solid #dc3545;
+            display: none;
+        }
+        
         footer {
             background: linear-gradient(135deg, var(--primary-color), var(--dark-blue));
             color: var(--white);
@@ -225,6 +236,8 @@
         <div class="online-warning">
             <strong>Atenção:</strong> Este teste requer conexão com a internet para funcionar corretamente.
         </div>
+        
+        <div class="error-message" id="error-message"></div>
         
         <div class="test-container">
             <h2>Teste sua velocidade de internet</h2>
@@ -276,15 +289,13 @@
             const downloadSpeed = document.getElementById('download-speed');
             const uploadSpeed = document.getElementById('upload-speed');
             const pingValue = document.getElementById('ping');
+            const errorMessage = document.getElementById('error-message');
             
             let testInProgress = false;
-            
-            // Verificar se o navegador suporta a API Speedtest
-            if (typeof SpeedTest === 'undefined') {
-                testStatus.textContent = "Erro: Não foi possível carregar o teste de velocidade. Verifique sua conexão com a internet.";
-                startBtn.disabled = true;
-                return;
-            }
+            let downloadStartTime, uploadStartTime;
+            let downloadSize = 10 * 1024 * 1024; // 10MB
+            let uploadSize = 2 * 1024 * 1024; // 2MB
+            let testData;
             
             startBtn.addEventListener('click', function() {
                 if (testInProgress) return;
@@ -293,93 +304,128 @@
                 startBtn.disabled = true;
                 testStatus.textContent = "Preparando teste...";
                 resultsSection.style.display = 'none';
+                errorMessage.style.display = 'none';
                 
                 // Reset speedometer
                 speedValue.textContent = '0';
                 
-                // Carrega o script da API Speedtest dinamicamente
-                if (typeof speedtest === 'undefined') {
-                    loadSpeedtestScript();
-                } else {
-                    startSpeedtest();
-                }
+                // Gerar dados de teste
+                testData = generateTestData(downloadSize);
+                
+                // Iniciar teste de ping primeiro
+                testPing();
             });
             
-            function loadSpeedtestScript() {
-                testStatus.textContent = "Carregando teste de velocidade...";
+            function testPing() {
+                testStatus.textContent = "Testando ping...";
                 
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/speedtest-net@2.1.0/dist/speedtest.min.js';
-                script.onload = function() {
-                    startSpeedtest();
+                const pingStartTime = performance.now();
+                const pingImage = new Image();
+                
+                pingImage.onload = function() {
+                    const pingEndTime = performance.now();
+                    const pingDuration = pingEndTime - pingStartTime;
+                    pingValue.textContent = Math.round(pingDuration);
+                    
+                    // Após ping, iniciar teste de download
+                    testDownload();
                 };
-                script.onerror = function() {
-                    testStatus.textContent = "Erro: Não foi possível carregar o teste de velocidade. Verifique sua conexão com a internet.";
-                    startBtn.disabled = false;
-                    testInProgress = false;
+                
+                pingImage.onerror = function() {
+                    showError("Falha ao testar ping. Verifique sua conexão com a internet.");
+                    resetTest();
                 };
-                document.head.appendChild(script);
+                
+                // Usar uma imagem pequena com cache busting para testar ping
+                pingImage.src = 'https://www.google.com/images/phd/px.gif?' + Date.now();
             }
             
-            function startSpeedtest() {
-                testStatus.textContent = "Conectando ao servidor...";
+            function testDownload() {
+                testStatus.textContent = "Testando velocidade de download...";
+                downloadStartTime = performance.now();
                 
-                const speedTest = new SpeedTest({
-                    maxDuration: 15000,
-                    pingCount: 10,
-                    serverUrl: 'https://speedtest.net/api/js/servers?engine=js'
+                fetch('https://httpbin.org/bytes/' + downloadSize, {
+                    cache: 'no-store'
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error("Falha no download");
+                    return response.blob();
+                })
+                .then(blob => {
+                    const downloadEndTime = performance.now();
+                    const duration = (downloadEndTime - downloadStartTime) / 1000; // em segundos
+                    const bitsLoaded = downloadSize * 8;
+                    const speedMbps = (bitsLoaded / duration / 1000000).toFixed(2);
+                    
+                    speedValue.textContent = speedMbps;
+                    downloadSpeed.textContent = speedMbps;
+                    animateNeedle(speedMbps);
+                    
+                    // Após download, iniciar teste de upload
+                    testUpload();
+                })
+                .catch(error => {
+                    showError("Erro no teste de download: " + error.message);
+                    resetTest();
                 });
+            }
+            
+            function testUpload() {
+                testStatus.textContent = "Testando velocidade de upload...";
+                uploadStartTime = performance.now();
                 
-                // Start ping test
-                speedTest.onping = function(ping) {
-                    testStatus.textContent = "Testando ping...";
-                    pingValue.textContent = ping.toFixed(0);
-                };
-                
-                // Start download test
-                speedTest.ondownloadteststart = function() {
-                    testStatus.textContent = "Testando velocidade de download...";
-                };
-                
-                speedTest.ondownloadprogress = function(dl) {
-                    speedValue.textContent = dl.toFixed(1);
-                    animateNeedle(dl);
-                };
-                
-                speedTest.ondownloadend = function(dl) {
-                    downloadSpeed.textContent = dl.toFixed(1);
-                    testStatus.textContent = "Download concluído. Preparando teste de upload...";
-                };
-                
-                // Start upload test
-                speedTest.onuploadteststart = function() {
-                    testStatus.textContent = "Testando velocidade de upload...";
-                };
-                
-                speedTest.onuploadprogress = function(ul) {
-                    speedValue.textContent = ul.toFixed(1);
-                    animateNeedle(ul);
-                };
-                
-                speedTest.onuploadend = function(ul) {
-                    uploadSpeed.textContent = ul.toFixed(1);
+                fetch('https://httpbin.org/post', {
+                    method: 'POST',
+                    body: testData,
+                    headers: {
+                        'Content-Type': 'application/octet-stream'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error("Falha no upload");
+                    return response.json();
+                })
+                .then(data => {
+                    const uploadEndTime = performance.now();
+                    const duration = (uploadEndTime - uploadStartTime) / 1000; // em segundos
+                    const bitsLoaded = uploadSize * 8;
+                    const speedMbps = (bitsLoaded / duration / 1000000).toFixed(2);
+                    
+                    speedValue.textContent = speedMbps;
+                    uploadSpeed.textContent = speedMbps;
+                    animateNeedle(speedMbps);
+                    
+                    // Teste concluído
                     testStatus.textContent = "Teste concluído!";
                     resultsSection.style.display = 'block';
                     startBtn.disabled = false;
                     testInProgress = false;
-                };
-                
-                speedTest.onerror = function(error) {
-                    testStatus.textContent = "Erro: " + error.message;
-                    startBtn.disabled = false;
-                    testInProgress = false;
-                };
-                
-                // Start the test
-                speedTest.start();
+                })
+                .catch(error => {
+                    showError("Erro no teste de upload: " + error.message);
+                    resetTest();
+                });
             }
             
-            // Animation for the speedometer needle (visual effect only)
+            function generateTestData(size) {
+                const data = new Uint8Array(size);
+                for (let i = 0; i < size; i++) {
+                    data[i] = Math.floor(Math.random() * 256);
+                }
+                return data;
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+            
+            function resetTest() {
+                startBtn.disabled = false;
+                testInProgress = false;
+                testStatus.textContent = "Pronto para testar novamente";
+            }
+            
             function animateNeedle(value) {
                 const outerCircle = document.querySelector('.outer-circle');
                 // Limit to 100 Mbps for visualization purposes
